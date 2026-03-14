@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef, createContext, useContext, useCallback, useMemo } from "react";
 import { Package, Camera, TrendingUp, Bell, BarChart3, Search, Menu, X, Eye, EyeOff, ChevronRight, Star, Shield, ArrowRight, LogOut, Home, Upload, DollarSign, Settings, ShoppingCart, Layers, Trash2, RotateCcw, Check, Plus, RefreshCw, Globe, CameraOff, ZoomIn, CheckCircle, Info, ArrowUp, ArrowDown, Minus, AlertTriangle, Activity, Target, Clock, ExternalLink, ChevronDown, ChevronUp, Sun, Moon, Sparkles, Calculator, Loader, Copy, FileText, Users, UserPlus, ScanLine } from "lucide-react";
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient("https://sstrhiehmybhsxxkdnmv.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNzdHJoaWVobXliaHN4eGtkbm12Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0ODAzMTYsImV4cCI6MjA4OTA1NjMxNn0.1HcBHgjy7_dEAYMiRjnO9_5ru1r0zlbbvV5OxdGmWxw");
 
 // ═══ THEME CONTEXT ═══
 const ThemeContext = createContext(null);
@@ -17,9 +20,26 @@ const useAuth = () => useContext(AuthContext);
 function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  useEffect(() => { try { const s = window.__sp_user; if (s) setUser(s); } catch {} setLoading(false); }, []);
-  const login = (u) => { setUser(u); window.__sp_user = u; };
-  const logout = () => { setUser(null); window.__sp_user = null; };
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        const u = session.user;
+        setUser({ id: u.id, name: u.user_metadata?.name || u.email.split("@")[0], email: u.email, avatar: (u.user_metadata?.name || u.email)[0].toUpperCase() });
+      }
+      setLoading(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        const u = session.user;
+        setUser({ id: u.id, name: u.user_metadata?.name || u.email.split("@")[0], email: u.email, avatar: (u.user_metadata?.name || u.email)[0].toUpperCase() });
+      } else { setUser(null); }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const login = (u) => setUser(u);
+  const logout = async () => { await supabase.auth.signOut(); setUser(null); };
   return <AuthContext.Provider value={{ user, login, logout, loading }}>{children}</AuthContext.Provider>;
 }
 
@@ -873,8 +893,33 @@ function Landing({ nav }) {
 function AuthPage({ mode, nav }) {
   const {login}=useAuth(); const [il,setIl]=useState(mode==="login"); const [sp,setSp]=useState(false); const [fd,setFd]=useState({name:"",email:"",password:""}); const [err,setErr]=useState(""); const [ld,setLd]=useState(false);
   const up=(k,v)=>setFd(p=>({...p,[k]:v}));
-  const sub=()=>{setErr("");if(!fd.email||!fd.password){setErr("Please fill in all fields.");return;}if(!il&&!fd.name){setErr("Please enter your name.");return;}if(fd.password.length<6){setErr("Password must be at least 6 characters.");return;}setLd(true);setTimeout(()=>{login({name:fd.name||fd.email.split("@")[0],email:fd.email,avatar:(fd.name||fd.email)[0].toUpperCase()});setLd(false);nav("dashboard");},800);};
-  const goo=()=>{setLd(true);setTimeout(()=>{login({name:"Google User",email:"user@gmail.com",avatar:"G"});setLd(false);nav("dashboard");},800);};
+  const sub=async()=>{
+    setErr("");
+    if(!fd.email||!fd.password){setErr("Please fill in all fields.");return;}
+    if(!il&&!fd.name){setErr("Please enter your name.");return;}
+    if(fd.password.length<6){setErr("Password must be at least 6 characters.");return;}
+    setLd(true);
+    try {
+      if(il) {
+        const {data,error}=await supabase.auth.signInWithPassword({email:fd.email,password:fd.password});
+        if(error){setErr(error.message);setLd(false);return;}
+        nav("dashboard");
+      } else {
+        const {data,error}=await supabase.auth.signUp({email:fd.email,password:fd.password,options:{data:{name:fd.name}}});
+        if(error){setErr(error.message);setLd(false);return;}
+        if(data.user) {
+          await supabase.from("profiles").insert({id:data.user.id,name:fd.name,email:fd.email,avatar:fd.name[0].toUpperCase()});
+        }
+        nav("dashboard");
+      }
+    } catch(e){setErr("Something went wrong. Please try again.");}
+    setLd(false);
+  };
+  const goo=async()=>{
+    setLd(true);
+    const {error}=await supabase.auth.signInWithOAuth({provider:"google",options:{redirectTo:window.location.origin}});
+    if(error){setErr(error.message);setLd(false);}
+  };
   return (<div className="aw">
     <div className="al"><div className="alc"><div className="logo" style={{color:"white",marginBottom:32,cursor:"pointer"}} onClick={()=>nav("landing")}><span className="dot"/> ShelfPul</div><h2>Sell smarter on every marketplace</h2><p>One platform to photograph, list, price, and monitor your products.</p><div className="afs"><div className="afi"><Camera size={18}/> Snap photos and list in seconds</div><div className="afi"><TrendingUp size={18}/> AI-powered competitive pricing</div><div className="afi"><Bell size={18}/> Daily price change alerts</div><div className="afi"><BarChart3 size={18}/> Real profit margin tracking</div></div></div></div>
     <div className="ar"><div className="afw" style={{animation:"fu .5s ease forwards"}}><div className="afh"><h1>{il?"Welcome back":"Create your account"}</h1><p>{il?"Log in to your ShelfPul account":"Start selling smarter in minutes"}</p></div>{err&&<div className="ferr">{err}</div>}<button className="btn bgo" onClick={goo} disabled={ld}><GoogleIcon/> Continue with Google</button><div className="dv">or</div><div>{!il&&<div className="ig"><label>Full Name</label><input className="inp" placeholder="John Doe" value={fd.name} onChange={e=>up("name",e.target.value)}/></div>}<div className="ig"><label>Email Address</label><input className="inp" type="email" placeholder="you@example.com" value={fd.email} onChange={e=>up("email",e.target.value)}/></div><div className="ig"><label>Password</label><div className="iw"><input className="inp" type={sp?"text":"password"} placeholder="Min. 6 characters" value={fd.password} onChange={e=>up("password",e.target.value)} onKeyDown={e=>e.key==="Enter"&&sub()}/><span className="iic" onClick={()=>setSp(!sp)}>{sp?<EyeOff size={18}/>:<Eye size={18}/>}</span></div></div><button className="btn bp" onClick={sub} disabled={ld} style={{width:"100%",justifyContent:"center",marginTop:8,padding:"14px 24px"}}>{ld?"Please wait...":il?"Log In":"Create Account"}</button></div><div className="asw">{il?"Don't have an account? ":"Already have an account? "}<a onClick={()=>{setIl(!il);setErr("");}}>{il?"Sign up":"Log in"}</a></div></div></div>
@@ -1900,8 +1945,9 @@ function Dash({ nav }) {
 }
 
 function Router() {
-  const [pg,setPg]=useState("landing"); const {user}=useAuth();
+  const [pg,setPg]=useState("landing"); const {user,loading}=useAuth();
   const go=(t)=>{if(t==="dashboard"&&!user){setPg("login");return;}setPg(t);window.scrollTo(0,0);};
+  if(loading) return <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",background:"var(--g50)"}}><div style={{textAlign:"center"}}><div className="logo" style={{fontSize:"1.5rem",marginBottom:16}}><span className="dot"/> ShelfPul</div><div style={{width:32,height:32,border:"3px solid var(--g200)",borderTopColor:"var(--p)",borderRadius:"50%",animation:"sp .8s linear infinite",margin:"0 auto"}}/></div></div>;
   if(pg==="login"||pg==="signup") return <AuthPage mode={pg} nav={go}/>;
   if(pg==="dashboard"||(user&&pg!=="landing")) return <Dash nav={go}/>;
   return <Landing nav={go}/>;
