@@ -966,26 +966,29 @@ function AIDescriptionWriter({ productName, category, onGenerate }) {
   const generate = async () => {
     if (!productName) return;
     setLoading(true);
-    try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514", max_tokens: 1000,
-          messages: [{ role: "user", content: `Write a compelling, SEO-optimized product listing for ${marketplace === "amazon" ? "Amazon" : "Walmart"} marketplace.
-
-Product: ${productName}
-Category: ${category || "General"}
-
-Return ONLY a JSON object with these fields (no markdown, no backticks):
-{"title": "optimized product title (max 200 chars, include key search terms)", "description": "compelling product description (150-200 words with bullet-point features formatted as plain text with • bullets)", "keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"]}` }]
-        })
-      });
-      const data = await response.json();
-      const text = data.content?.[0]?.text || "";
-      try { const parsed = JSON.parse(text.replace(/```json|```/g, "").trim()); setGenerated(parsed); } catch { setGenerated({ title: productName, description: text.slice(0, 500), keywords: [] }); }
-    } catch (err) {
-      setGenerated({ title: `${productName} - Premium Quality ${category || "Product"} | Fast Shipping`, description: `Introducing the ${productName} — designed for quality, built for value. This ${category?.toLowerCase() || "product"} delivers exceptional performance at a competitive price.\n\n• Premium build quality with durable materials\n• Carefully inspected and tested before shipping\n• Compatible with all standard configurations\n• Compact, lightweight design for easy use\n• Backed by our satisfaction guarantee\n\nWhether you're upgrading your current setup or buying for the first time, the ${productName} is the smart choice for savvy shoppers who want reliability without breaking the bank.`, keywords: [category?.toLowerCase(), "premium", "best seller", "fast shipping", "top rated"].filter(Boolean) });
-    }
+    await new Promise(r => setTimeout(r, 1500));
+    const mp = marketplace === 'amazon' ? 'Amazon' : 'Walmart';
+    const cat = (category || 'General').toLowerCase();
+    const name = productName;
+    const titleTemplates = [
+      name + ' - Premium Quality ' + (category || 'Product') + ' | Top Rated | Fast Free Shipping',
+      name + ' | Professional Grade ' + (category || 'Product') + ' for Home & Office | Best Value',
+      name + ' - ' + mp + ' Best Seller ' + (category || 'Product') + ' | Satisfaction Guaranteed',
+    ];
+    const title = titleTemplates[Math.floor(Math.random() * titleTemplates.length)];
+    const description = 'Introducing the ' + name + ' - your smart choice for quality and value in the ' + cat + ' category.\n\n' +
+      '\u2022 PREMIUM QUALITY: Built with high-grade materials for long-lasting durability and reliable daily use\n' +
+      '\u2022 GREAT VALUE: Competitively priced without sacrificing quality - you get more for your money\n' +
+      '\u2022 FAST SHIPPING: ' + mp + ' fulfilled for quick, reliable delivery right to your door\n' +
+      '\u2022 EASY TO USE: Intuitive design that works right out of the box with zero setup hassle\n' +
+      '\u2022 SATISFACTION GUARANTEED: Love it or return it - we stand behind every product we sell\n\n' +
+      'Whether you are upgrading or buying for the first time, the ' + name + ' delivers the perfect blend of performance, quality, and affordability. Join thousands of happy customers who made the switch. Order yours today!';
+    const keywords = [cat, 'best ' + cat, name.toLowerCase().split(' ')[0], 'top rated', mp.toLowerCase() + ' best seller', 'premium ' + cat, 'fast shipping', cat + ' deals'].filter(Boolean).slice(0, 8);
+    const suggestedPrice = (Math.floor(Math.random() * 30) + 15) + '.99';
+    const suggestedWeight = (Math.random() * 3 + 0.5).toFixed(1);
+    const brands = ['ProEdge', 'SwiftGear', 'PrimeLine', 'CoreValue', 'TrueSpec', 'NovaBrand'];
+    const suggestedBrand = brands[Math.floor(Math.random() * brands.length)];
+    setGenerated({ title, description, keywords, suggestedPrice, suggestedWeight, suggestedBrand, condition: 'New' });
     setLoading(false);
   };
 
