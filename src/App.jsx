@@ -46,15 +46,46 @@ function AuthProvider({ children }) {
 const ProductsContext = createContext(null);
 const useProducts = () => useContext(ProductsContext);
 function ProductsProvider({ children }) {
-  const [products, setProducts] = useState([
-    { id:"p1", name:"Wireless Bluetooth Earbuds", category:"Electronics", price:"34.99", cost:"12.00", marketplace:"Amazon", status:"active", images:[], sku:"WBE-001", description:"Premium wireless earbuds with noise cancellation.", createdAt:"2026-03-10" },
-    { id:"p2", name:'LED Ring Light 10"', category:"Photography", price:"22.50", cost:"8.50", marketplace:"Walmart", status:"active", images:[], sku:"LRL-010", description:"Professional LED ring light.", createdAt:"2026-03-09" },
-    { id:"p3", name:"Phone Stand Adjustable", category:"Accessories", price:"15.99", cost:"4.25", marketplace:"Amazon", status:"price-alert", images:[], sku:"PSA-003", description:"Universal adjustable phone stand.", createdAt:"2026-03-08" },
-    { id:"p4", name:"USB-C Hub 7-in-1", category:"Electronics", price:"29.00", cost:"11.00", marketplace:"Amazon", status:"active", images:[], sku:"UCH-007", description:"7-in-1 USB-C hub with HDMI.", createdAt:"2026-03-07" },
-    { id:"p5", name:"Yoga Mat Premium", category:"Fitness", price:"19.99", cost:"6.00", marketplace:"Walmart", status:"new", images:[], sku:"YMP-001", description:"Extra thick non-slip yoga mat.", createdAt:"2026-03-06" },
-  ]);
-  const addProduct = (p) => { const np = { ...p, id:"p"+Date.now(), createdAt:new Date().toISOString().split("T")[0] }; setProducts(prev => [np,...prev]); return np; };
-  return <ProductsContext.Provider value={{ products, addProduct }}>{children}</ProductsContext.Provider>;
+  const { user } = useAuth();
+  const [products, setProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+  const demoProducts = [
+    { id:'demo1', name:'Wireless Bluetooth Earbuds', category:'Electronics', price:'34.99', cost:'12.00', marketplace:'Amazon', status:'active', images:[], sku:'WBE-001', description:'Premium wireless earbuds.', createdAt:'2026-03-10' },
+    { id:'demo2', name:'LED Ring Light 10 inch', category:'Photography', price:'22.50', cost:'8.50', marketplace:'Walmart', status:'active', images:[], sku:'LRL-010', description:'Professional LED ring light.', createdAt:'2026-03-09' },
+    { id:'demo3', name:'Phone Stand Adjustable', category:'Accessories', price:'15.99', cost:'4.25', marketplace:'Amazon', status:'price-alert', images:[], sku:'PSA-003', description:'Universal adjustable phone stand.', createdAt:'2026-03-08' },
+    { id:'demo4', name:'USB-C Hub 7-in-1', category:'Electronics', price:'29.00', cost:'11.00', marketplace:'Amazon', status:'active', images:[], sku:'UCH-007', description:'7-in-1 USB-C hub with HDMI.', createdAt:'2026-03-07' },
+    { id:'demo5', name:'Yoga Mat Premium', category:'Fitness', price:'19.99', cost:'6.00', marketplace:'Walmart', status:'new', images:[], sku:'YMP-001', description:'Extra thick non-slip yoga mat.', createdAt:'2026-03-06' },
+  ];
+  useEffect(() => {
+    if (!(user && user.id)) { setProducts(demoProducts); setLoadingProducts(false); return; }
+    setLoadingProducts(true);
+    supabase.from('products').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (error) { setProducts([]); }
+        else { setProducts(data.map(p => ({ id:p.id, name:p.name, category:p.category, price:p.price, cost:p.cost, marketplace:p.marketplace, status:p.status, sku:p.sku, description:p.description, images:p.images||[], createdAt:p.created_at ? p.created_at.split('T')[0] : '' }))); }
+        setLoadingProducts(false);
+      });
+  }, [user ? user.id : null]);
+  const addProduct = async (p) => {
+    if (!(user && user.id)) { const np={...p,id:'p'+Date.now(),createdAt:new Date().toISOString().split('T')[0]}; setProducts(prev=>[np,...prev]); return np; }
+    const row = { user_id:user.id, name:p.name, category:p.category||'Other', price:String(p.price||'0'), cost:String(p.cost||'0'), marketplace:p.marketplace||'Amazon', status:p.status||'active', sku:p.sku||'', description:p.description||'', images:p.images||[] };
+    const { data, error } = await supabase.from('products').insert(row).select().single();
+    if (error) { return null; }
+    const np = { id:data.id, name:data.name, category:data.category, price:data.price, cost:data.cost, marketplace:data.marketplace, status:data.status, sku:data.sku, description:data.description, images:data.images||[], createdAt:data.created_at ? data.created_at.split('T')[0] : '' };
+    setProducts(prev => [np,...prev]);
+    return np;
+  };
+  const deleteProduct = async (id) => {
+    if (!(user && user.id)) { setProducts(prev=>prev.filter(p=>p.id!==id)); return; }
+    await supabase.from('products').delete().eq('id',id).eq('user_id',user.id);
+    setProducts(prev=>prev.filter(p=>p.id!==id));
+  };
+  const updateProduct = async (id, updates) => {
+    if (!(user && user.id)) { setProducts(prev=>prev.map(p=>p.id===id?{...p,...updates}:p)); return; }
+    await supabase.from('products').update(updates).eq('id',id).eq('user_id',user.id);
+    setProducts(prev=>prev.map(p=>p.id===id?{...p,...updates}:p));
+  };
+  return <ProductsContext.Provider value={{ products, addProduct, deleteProduct, updateProduct, loadingProducts }}>{children}</ProductsContext.Provider>;
 }
 
 const MP_SPECS = {
