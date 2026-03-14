@@ -352,7 +352,39 @@ function PhotoUploadZone({ images, setImages, max=9 }) {
 }
 
 // ═══ ADD PRODUCT WIZARD ═══
-function AddProductFlow({ onComplete, onCancel }) {
+function AddProductFlow({
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiDone, setAiDone] = useState(false);
+  const [isPaid, setIsPaid] = useState(true);
+
+  const analyzePhoto = async (imgSrc) => {
+    if (!isPaid) return;
+    setAiLoading(true);
+    try {
+      const base64 = imgSrc.split(",")[1] || imgSrc;
+      const mediaMatch = imgSrc.match(/data:([^;]+);/);
+      const mediaType = mediaMatch ? mediaMatch[1] : "image/jpeg";
+      const resp = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: base64, mediaType })
+      });
+      const data = await resp.json();
+      if (data.title) u("name", data.title);
+      if (data.category) u("cat", data.category);
+      if (data.suggestedPrice) u("price", data.suggestedPrice);
+      if (data.estimatedCost) u("cost", data.estimatedCost);
+      if (data.description) u("desc", data.description);
+      if (data.brand) u("sku", data.brand);
+      setAiDone(true);
+    } catch (err) { console.error("AI analyze error:", err); }
+    setAiLoading(false);
+  };
+
+  useEffect(() => {
+    if (imgs.length === 1 && !aiDone && isPaid && imgs[0].src) { analyzePhoto(imgs[0].src); }
+  }, [imgs.length]);
+ onComplete, onCancel }) {
   const { addProduct } = useProducts();
   const [step, setStep] = useState(1);
   const [imgs, setImgs] = useState([]);
@@ -373,6 +405,9 @@ function AddProductFlow({ onComplete, onCancel }) {
 
       {step===1 && <div className="pn"><div className="pnh"><span className="pnt">Product Photos</span><span style={{fontSize:".8rem",color:"var(--g500)"}}>Up to 9</span></div><div className="pnb">
         <PhotoUploadZone images={imgs} setImages={setImgs} max={9}/>
+        {aiLoading && <div style={{textAlign:"center",padding:"16px",background:"#eff6ff",borderRadius:8,marginTop:12}}><div style={{width:24,height:24,border:"3px solid #ddd",borderTopColor:"#2563eb",borderRadius:"50%",animation:"sp .8s linear infinite",margin:"0 auto 8px"}}/><div style={{fontSize:".85rem",color:"#2563eb",fontWeight:600}}>AI is analyzing your product photo...</div></div>}
+        {aiDone && <div style={{textAlign:"center",padding:"12px",background:"#ecfdf5",borderRadius:8,marginTop:12,fontSize:".85rem",color:"#059669",fontWeight:600}}>Product details auto-filled from photo. Click Next to review.</div>}
+
         {imgs.length>0 && <div style={{background:"var(--g50)",border:"1px solid var(--g200)",borderRadius:"var(--r)",padding:20,marginTop:20}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}><Info size={16} style={{color:"var(--p)"}}/><span style={{fontSize:".85rem",fontWeight:600,color:"var(--g700)"}}>Image Requirements</span></div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>{Object.entries(MP_SPECS).map(([k,s])=>(<div key={k} style={{padding:12,borderRadius:"var(--rs)",background:s.bg,border:`1px solid ${s.color}20`}}><div style={{fontWeight:700,color:s.color,fontSize:".85rem",marginBottom:8}}>{s.name}</div><div style={{fontSize:".8rem",color:"var(--g600)",lineHeight:1.8}}>Min: {s.min}x{s.min}px<br/>Format: {s.format}<br/>Background: {s.bgReq}</div></div>))}</div>
