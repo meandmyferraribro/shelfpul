@@ -455,7 +455,7 @@ function AddProductFlow({ onComplete, onCancel }) {
 
       {step===4 && <div className="pn"><div className="pnb">
         {pub?<div className="ss"><div className="psp"/><h3 style={{fontFamily:"var(--fd)",fontWeight:700,marginBottom:8}}>Publishing...</h3><p style={{color:"var(--g500)"}}>Uploading images and creating your listing.</p></div>
-        :done?<div className="ss"><div className="ssi"><CheckCircle size={40}/></div><h3 style={{fontFamily:"var(--fd)",fontWeight:700,fontSize:"1.5rem",marginBottom:8}}>Listed Successfully!</h3><p style={{color:"var(--g500)",marginBottom:32}}>"{f.name}" is live on {f.mp.map(m=>m==="amazon"?"Amazon":"Walmart").join(" & ")}.</p><div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}><button className="btn bp" onClick={reset}><Plus size={16}/> Add Another</button><button className="btn bs" onClick={()=>onComplete?.()}><Package size={16}/> View Listings</button></div></div>:null}
+        :done?<div className="ss"><div className="ssi"><CheckCircle size={40}/></div><h3 style={{fontFamily:"var(--fd)",fontWeight:700,fontSize:"1.5rem",marginBottom:8}}>Listed Successfully!</h3><p style={{color:"var(--g500)",marginBottom:32}}>"{f.name}" has been saved to your ShelfPul dashboard.</p><p style={{color:"var(--g500)",marginBottom:32,fontSize:".85rem"}}>To publish live, connect your seller accounts in Settings.</p><div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}><button className="btn bp" onClick={reset}><Plus size={16}/> Add Another</button><button className="btn bs" onClick={()=>onComplete?.()}><Package size={16}/> View Listings</button></div></div>:null}
       </div></div>}
 
       {!pub&&!done&&<div style={{display:"flex",justifyContent:"space-between",marginTop:24}}>
