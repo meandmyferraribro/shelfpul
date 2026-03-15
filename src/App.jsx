@@ -352,10 +352,17 @@ function PhotoUploadZone({ images, setImages, max=9 }) {
 }
 
 // ═══ ADD PRODUCT WIZARD ═══
-function AddProductFlow({
+function AddProductFlow({ onComplete, onCancel }) {
+  const { addProduct } = useProducts();
+  const [step, setStep] = useState(1);
+  const [imgs, setImgs] = useState([]);
+  const [pub, setPub] = useState(false);
+  const [done, setDone] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiDone, setAiDone] = useState(false);
   const [isPaid, setIsPaid] = useState(true);
+  const [f, setF] = useState({name:"",cat:"",sku:"",price:"",cost:"",desc:"",mp:[],upc:"",brand:"",wt:"",cond:"New"});
+  const u=(k,v)=>setF(p=>({...p,[k]:v}));
 
   const analyzePhoto = async (imgSrc) => {
     if (!isPaid) return;
@@ -384,14 +391,6 @@ function AddProductFlow({
   useEffect(() => {
     if (imgs.length === 1 && !aiDone && isPaid && imgs[0].src) { analyzePhoto(imgs[0].src); }
   }, [imgs.length]);
- onComplete, onCancel }) {
-  const { addProduct } = useProducts();
-  const [step, setStep] = useState(1);
-  const [imgs, setImgs] = useState([]);
-  const [pub, setPub] = useState(false);
-  const [done, setDone] = useState(false);
-  const [f, setF] = useState({name:"",cat:"",sku:"",price:"",cost:"",desc:"",mp:[],upc:"",brand:"",wt:"",cond:"New"});
-  const u=(k,v)=>setF(p=>({...p,[k]:v}));
   const tgl=(m)=>setF(p=>({...p,mp:p.mp.includes(m)?p.mp.filter(x=>x!==m):[...p.mp,m]}));
   const ok=()=>{if(step===1)return imgs.length>0;if(step===2)return f.name&&f.price&&f.cat;if(step===3)return f.mp.length>0;return true;};
   const mg=f.price&&f.cost?(((parseFloat(f.price)-parseFloat(f.cost))/parseFloat(f.price))*100).toFixed(1):null;
